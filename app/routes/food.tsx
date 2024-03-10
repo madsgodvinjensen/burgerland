@@ -4,9 +4,9 @@ import {
   type MetaFunction,
   ActionFunctionArgs,
 } from "@remix-run/node";
-import { Form, useLoaderData } from "@remix-run/react";
+import { Form, useActionData, useLoaderData } from "@remix-run/react";
 import { checkAvailability, getAvailableFeatures } from "~/backend";
-import { Heading } from "~/components/ui/text";
+import { ErrorMessage, Heading } from "~/components/ui/text";
 import { bookingProgress } from "~/lib/cookies";
 
 export const meta: MetaFunction = () => {
@@ -55,7 +55,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   if (!available) {
     return {
-      errorCode: "food-not-available",
+      errorCode: "food-feature-not-available",
     };
   }
 
@@ -70,11 +70,19 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
 export default function Food() {
   const { features } = useLoaderData<typeof loader>();
+  const actionData = useActionData<typeof action>();
+
   return (
     <main className="p-4 flex flex-col gap-6">
       <Heading headingStyle="h2" as="h2">
         Book your food
       </Heading>
+      {actionData?.errorCode ? (
+        <ErrorMessage>
+          The chosen eating experience was not available on the selected day.
+          Pick another.
+        </ErrorMessage>
+      ) : null}
       <Form method="post" className="flex flex-col gap-2">
         {features.map((feature) => (
           <button

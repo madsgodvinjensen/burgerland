@@ -3,9 +3,9 @@ import type {
   LoaderFunctionArgs,
   MetaFunction,
 } from "@remix-run/node";
-import { Form, redirect, useLoaderData } from "@remix-run/react";
+import { Form, redirect, useActionData, useLoaderData } from "@remix-run/react";
 import { cn } from "../lib/utils";
-import { Heading } from "../components/ui/text";
+import { ErrorMessage, Heading } from "../components/ui/text";
 import { Label } from "../components/ui/label";
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
@@ -79,6 +79,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
 export default function Index() {
   const { availability, defaultDate } = useLoaderData<typeof loader>();
+  const actionData = useActionData<typeof action>();
   const [date, setDate] = useState<Date | undefined>(new Date(defaultDate));
 
   const disabledDays = Object.entries(availability)
@@ -90,6 +91,11 @@ export default function Index() {
       <Heading headingStyle="h2" as="h2">
         Welcome to Burger Land!
       </Heading>
+      {actionData?.errorCode ? (
+        <ErrorMessage>
+          Tickets where not available on the selected day. Pick another.
+        </ErrorMessage>
+      ) : null}
       <Form method="post" className="flex flex-col gap-2 bg-orange-100 p-4">
         <Heading headingStyle="h3" as="h3">
           Book your experience today
