@@ -27,16 +27,52 @@ export async function getTicketAvailability(
   });
 }
 
+type FeatureSection = "food" | "accessibility" | "merchandise";
 type Feature = {
   id: string;
+  name: string;
+  section: FeatureSection;
+  description: string;
 };
+
+const features: Feature[] = [
+  {
+    id: "burger-emporium",
+    name: "Burger Emporium (Michelin)",
+    section: "food",
+    description:
+      "First class eating experience, right in the heart of Burger Land. See for yourself how high a burger can be lifted!",
+  },
+  {
+    id: "family-restaurant",
+    name: "Family restaurant",
+    section: "food",
+    description:
+      "Take a break in our nice family restaurant. Buffet serving, lots of great choices for both kids and adults. And a soft serve machine!",
+  },
+  {
+    id: "picnic",
+    name: "Picnic package",
+    section: "food",
+    description:
+      "Pick up a picnic package at the entrance to enjoy in one of our cozy spots. Options for grill, vegetarian and vegan.",
+  },
+];
 
 export async function checkAvailability(
   date: Date,
   guests: number,
-  features?: Feature[]
+  features?: Feature["id"][]
 ) {
   return new Promise<boolean>((resolve) => {
     setTimeout(() => resolve(randomBoolean(0.1)), randomLatency());
   });
+}
+
+export async function getAvailableFeatures(
+  date: Date,
+  guests: number,
+  section: FeatureSection
+) {
+  return features.filter((x) => x.section === section && randomBoolean(0.3));
 }
