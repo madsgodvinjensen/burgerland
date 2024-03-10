@@ -1,5 +1,9 @@
-import type { MetaFunction } from "@remix-run/node";
-import { Form } from "@remix-run/react";
+import type {
+  ActionFunctionArgs,
+  LoaderFunctionArgs,
+  MetaFunction,
+} from "@remix-run/node";
+import { Form, redirect, useLoaderData } from "@remix-run/react";
 import { cn } from "../lib/utils";
 import { Heading } from "../components/ui/text";
 import { Label } from "../components/ui/label";
@@ -14,20 +18,79 @@ import {
 import { useState } from "react";
 import { CalendarIcon, PersonStandingIcon } from "lucide-react";
 import { format } from "date-fns";
+import { checkAvailability, getTicketAvailability } from "~/backend";
+import { bookingProgress } from "~/lib/cookies";
 
 export const meta: MetaFunction = () => {
   return [{ title: "Burgerland booking" }];
 };
 
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const params = new URL(request.url).searchParams;
+
+  const dateParam = params.get("date");
+  const defaultDate = dateParam === null ? new Date() : new Date(dateParam);
+
+  const availability = await getTicketAvailability(
+    parseInt(params.get("guests") ?? "1"),
+    defaultDate.getFullYear(),
+    defaultDate.getMonth()
+  );
+
+  return {
+    defaultDate,
+    availability,
+  };
+};
+
+export const action = async ({ request }: ActionFunctionArgs) => {
+  const formData = await request.formData();
+  const guests = formData.get("guests");
+  const date = formData.get("date");
+  if (!guests || !date) {
+    throw new Response("Parameters missing", {
+      status: 400,
+    });
+  }
+
+  const available = await checkAvailability(
+    new Date(date as string),
+    parseInt(guests as string)
+  );
+
+  if (!available) {
+    return {
+      errorCode: "tickets-not-available",
+    };
+  }
+
+  const cookieHeader = request.headers.get("Cookie");
+  const cookie = (await bookingProgress.parse(cookieHeader)) ?? {};
+
+  cookie.date = new Date(date as string);
+  cookie.guests = parseInt(guests as string);
+
+  return redirect("/food", {
+    headers: {
+      "Set-Cookie": await bookingProgress.serialize(cookie),
+    },
+  });
+};
+
 export default function Index() {
-  const [date, setDate] = useState<Date>();
+  const { availability, defaultDate } = useLoaderData<typeof loader>();
+  const [date, setDate] = useState<Date | undefined>(new Date(defaultDate));
+
+  const disabledDays = Object.entries(availability)
+    .filter(([, value]) => !value)
+    .map(([key]) => new Date(key));
 
   return (
     <main className="p-4 flex flex-col gap-10">
       <Heading headingStyle="h2" as="h2">
         Welcome to Burger Land!
       </Heading>
-      <Form className="flex flex-col gap-2 bg-orange-100 p-4" action="/booking">
+      <Form method="post" className="flex flex-col gap-2 bg-orange-100 p-4">
         <Heading headingStyle="h3" as="h3">
           Book your experience today
         </Heading>
@@ -36,7 +99,14 @@ export default function Index() {
             How many are you?
             <span className="flex gap-2 items-center">
               <PersonStandingIcon />
-              <Input type="number" name="guests" className="text-lg w-20" />
+              <Input
+                type="number"
+                name="guests"
+                className="text-lg w-20"
+                required
+                min={1}
+                max={10}
+              />
             </span>
           </Label>
 
@@ -64,6 +134,28 @@ export default function Index() {
                 selected={date}
                 onSelect={(e) => setDate(e)}
                 initialFocus
+                formatters={{
+                  formatDay(date: Date) {
+                    console.log({ date, av: availability[date.toISOString()] });
+                    return (
+                      <span
+                        className={cn("font-bold", {
+                          "text-red-800 block":
+                            !availability[date.toISOString()],
+                          "text-green-800": availability[date.toISOString()],
+                        })}
+                      >
+                        {format(date, "d")}
+                      </span>
+                    );
+                  },
+                }}
+                disabled={[
+                  ...disabledDays,
+                  {
+                    before: new Date(),
+                  },
+                ]}
               />
             </PopoverContent>
           </Popover>
