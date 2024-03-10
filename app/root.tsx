@@ -1,4 +1,4 @@
-import { cssBundleHref } from "@remix-run/css-bundle";
+// import { cssBundleHref } from "@remix-run/css-bundle";
 import type { LinksFunction } from "@remix-run/node";
 import {
   Links,
@@ -9,8 +9,10 @@ import {
   ScrollRestoration,
 } from "@remix-run/react";
 
+import stylesheet from "~/tailwind.css";
+
 export const links: LinksFunction = () => [
-  ...(cssBundleHref ? [{ rel: "stylesheet", href: cssBundleHref }] : []),
+  { rel: "stylesheet", href: stylesheet },
 ];
 
 export default function App() {
@@ -23,7 +25,15 @@ export default function App() {
         <Links />
       </head>
       <body>
+        <header className="bg-yellow-500 p-4">
+          <h1 className="text-2xl font-bold text-center">Burger Land</h1>
+        </header>
+
         <Outlet />
+        <footer className="bg-yellow-500 p-4 text-center">
+          <p>&copy; 2024 Burger Land. All rights reserved.</p>
+        </footer>
+
         <ScrollRestoration />
         <Scripts />
         <LiveReload />
